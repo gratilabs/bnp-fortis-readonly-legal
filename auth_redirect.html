@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Authorization Redirect — Hermes BNP Fortis Read-Only Connector</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;line-height:1.55;max-width:900px;margin:40px auto;padding:0 20px;color:#17202a;background:#fff}
+    h1{line-height:1.2}.box{background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:16px;margin:16px 0}.ok{border-left:4px solid #16a34a}.err{border-left:4px solid #dc2626}
+    code,textarea{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}.mono{word-break:break-all;background:#f3f4f6;padding:10px;border-radius:8px}
+    textarea{width:100%;min-height:120px}.btn{display:inline-block;background:#2563eb;color:white;border:0;border-radius:8px;padding:10px 14px;cursor:pointer} .muted{color:#64748b;font-size:.95rem}
+  </style>
+</head>
+<body>
+  <h1>Authorization redirect received</h1>
+  <div id="status" class="box">Reading redirect parameters…</div>
+
+  <h2>Next step</h2>
+  <p>Copy the full redirected URL below and give it to the local connector command.</p>
+  <textarea id="fullUrl" readonly></textarea>
+  <p><button class="btn" onclick="copyFullUrl()">Copy full URL</button></p>
+
+  <h2>Local command</h2>
+  <p>Run this on the Hermes machine:</p>
+  <pre class="mono" id="cmd"></pre>
+
+  <p class="muted">This page is static. It does not exchange the authorization code, initiate payments, or send any extra requests from your browser. The local Hermes connector exchanges the code using your local private key.</p>
+
+<script>
+(function(){
+  const full = window.location.href;
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  const state = params.get('state');
+  const error = params.get('error');
+  const errorDescription = params.get('error_description');
+  const status = document.getElementById('status');
+  document.getElementById('fullUrl').value = full;
+  const escaped = full.replace(/'/g, "'\\''");
+  document.getElementById('cmd').textContent = "cd ~/.hermes/bank-readonly/bnp-fortis-enablebanking\n. .venv/bin/activate\nset -a; . ./.env.local; set +a\npython bnp_fortis_readonly.py complete-auth '" + escaped + "'";
+  if (error) {
+    status.className = 'box err';
+    status.innerHTML = '<strong>Authorization error:</strong> ' + escapeHtml(error) + (errorDescription ? '<br>' + escapeHtml(errorDescription) : '');
+  } else if (code) {
+    status.className = 'box ok';
+    status.innerHTML = '<strong>Success:</strong> authorization code received.' + (state ? '<br><span class="muted">State present.</span>' : '');
+  } else {
+    status.className = 'box';
+    status.innerHTML = 'No <code>code</code> parameter found yet. If you arrived here directly, start the authorization flow first.';
+  }
+})();
+function copyFullUrl(){
+  const el = document.getElementById('fullUrl');
+  el.select();
+  navigator.clipboard.writeText(el.value).catch(()=>document.execCommand('copy'));
+}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+</script>
+</body>
+</html>
